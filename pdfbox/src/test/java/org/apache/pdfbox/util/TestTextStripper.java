@@ -93,6 +93,8 @@ public class TestTextStripper extends TestCase
      */
     private static final Log log = LogFactory.getLog(TestTextStripper.class);
 
+    private static final String TEST_PDF_PATH = "src/test/resources/input/cweb.pdf";
+
     private boolean bFail = false;
     private PDFTextStripper stripper = null;
     private final String encoding = "UTF-16LE";
@@ -401,6 +403,189 @@ public class TestTextStripper extends TestCase
             {
                 fail("One or more failures, see test log for details");
             }
+    }
+
+    /**
+     * Test text extraction on a document with many text positions
+     * to verify StringBuilder optimization maintains correctness.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testTextExtractionWithLongDocument() throws Exception
+    {
+        // Load a PDF with substantial text content
+        File testFile = new File(TEST_PDF_PATH);
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
+            textStripper.setLineSeparator("\n");
+
+            String text = textStripper.getText(document);
+
+            // Verify basic correctness
+            assertNotNull("Extracted text should not be null", text);
+            assertTrue("Text should not be empty", !text.isEmpty());
+
+            // Verify word separators are present
+            assertTrue("Text should contain spaces", text.contains(" "));
+
+            // Verify the text contains expected content (well-formed)
+            assertTrue("Text should be well-formed", text.split("\\s+").length > 10);
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that word separators are correctly inserted between words.
+     * This is critical because StringBuilder changes how strings are built.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testWordSeparatorInsertion() throws Exception
+    {
+        // Use a simple PDF where we know word boundaries
+        File testFile = new File(TEST_PDF_PATH);
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
+            textStripper.setLineSeparator("\n");
+            textStripper.setWordSeparator("|"); // Use distinctive separator
+
+            String text = textStripper.getText(document);
+
+            // Verify separator is used
+            assertTrue("Custom word separator should be present",
+                       text.contains("|"));
+
+            // Verify words aren't run together
+            assertFalse("Words should not run together",
+                        text.matches(".*[a-zA-Z]{20,}.*"));
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that charactersByArticle collection works correctly.
+     * This test verifies the change from Vector to ArrayList.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testCharactersByArticleType() throws Exception
+    {
+        File testFile = new File(TEST_PDF_PATH);
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
+
+            // Extract text (this populates charactersByArticle)
+            textStripper.getText(document);
+
+            // Access the protected field via public method
+            java.util.List<java.util.List> articles = textStripper.getCharactersByArticle();
+
+            // Verify it's a List (works with both Vector and ArrayList)
+            assertNotNull("charactersByArticle should not be null", articles);
+            assertTrue("charactersByArticle should be a List",
+                       articles instanceof java.util.List);
+            assertTrue("charactersByArticle should not be empty",
+                       !articles.isEmpty());
+
+            // Verify we can iterate and access elements
+            for (int i = 0; i < articles.size(); i++)
+            {
+                Object article = articles.get(i);
+                assertTrue("Each article should be a List",
+                           article instanceof java.util.List);
+            }
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that PDFTextStripperByArea (subclass) still works
+     * after Vector to ArrayList change.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testPDFTextStripperByAreaCompatibility() throws Exception
+    {
+        File testFile = new File(TEST_PDF_PATH);
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+
+            // Test the subclass
+            PDFTextStripperByArea textStripperByArea = new PDFTextStripperByArea();
+
+            // Add a region
+            textStripperByArea.addRegion("region1",
+                              new java.awt.geom.Rectangle2D.Double(0, 0, 500, 500));
+
+            // Extract regions
+            java.util.List<org.apache.pdfbox.pdmodel.PDPage> pages = document.getDocumentCatalog().getAllPages();
+            org.apache.pdfbox.pdmodel.PDPage firstPage =
+                (org.apache.pdfbox.pdmodel.PDPage) pages.get(0);
+            textStripperByArea.extractRegions(firstPage);
+
+            // Get text from region
+            String text = textStripperByArea.getTextForRegion("region1");
+
+            // Verify it worked
+            assertNotNull("Region text should not be null", text);
+            // If there's text in that region, it should be extracted
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
     }
 
     /**

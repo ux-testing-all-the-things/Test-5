@@ -276,7 +276,8 @@ public class PDFMergerUtility
             COSArray srcNums = (COSArray)srcLabels.getDictionaryObject( COSName.getPDFName( "Nums" ) );
             if (srcNums != null)
             {
-                for( int i=0; i<srcNums.size(); i+=2 )
+                int srcNumsSize = srcNums.size();
+                for( int i=0; i<srcNumsSize; i+=2 )
                 {
                     COSNumber labelIndex = (COSNumber)srcNums.getObject( i );
                     long labelIndexValue = labelIndex.intValue();
@@ -336,7 +337,8 @@ public class PDFMergerUtility
         {
             COSArray array = new COSArray();
             List list = (List)base;
-            for( int i=0; i<list.size(); i++ )
+            int listSize = list.size();
+            for( int i=0; i<listSize; i++ )
             {
                 array.add( cloneForNewDocument( destination, list.get( i ) ) );
             }
@@ -357,7 +359,8 @@ public class PDFMergerUtility
         {
             COSArray newArray = new COSArray();
             COSArray array = (COSArray)base;
-            for( int i=0; i<array.size(); i++ )
+            int arraySize = array.size();
+            for( int i=0; i<arraySize; i++ )
             {
                 newArray.add( cloneForNewDocument( destination, array.get( i ) ) );
             }
@@ -422,7 +425,8 @@ public class PDFMergerUtility
         {
             COSArray array = new COSArray();
             List list = (List)base;
-            for( int i=0; i<list.size(); i++ )
+            int listSize = list.size();
+            for( int i=0; i<listSize; i++ )
             {
                 array.add( cloneForNewDocument( destination, list.get( i ) ) );
             }
@@ -441,7 +445,8 @@ public class PDFMergerUtility
         else if( base instanceof COSArray )
         {
             COSArray array = (COSArray)base;
-            for( int i=0; i<array.size(); i++ )
+            int arraySize = array.size();
+            for( int i=0; i<arraySize; i++ )
             {
               ((COSArray)target).add( cloneForNewDocument( destination, array.get( i ) ) );
             }

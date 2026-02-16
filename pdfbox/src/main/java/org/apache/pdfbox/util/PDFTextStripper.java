@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Vector;
 
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.cos.COSStream;
@@ -88,7 +87,7 @@ public class PDFTextStripper extends PDFStreamEngine
      *
      * Most PDFs won't have any beads, so charactersByArticle will contain a single entry.
      */
-    protected Vector charactersByArticle = new Vector();
+    protected List<List> charactersByArticle = new ArrayList<List>();
 
     private Map characterListMapping = new HashMap();
 
@@ -350,17 +349,25 @@ public class PDFTextStripper extends PDFStreamEngine
                 numberOfArticleSections = 1;
             }
             int originalSize = charactersByArticle.size();
-            charactersByArticle.setSize( numberOfArticleSections );
+
+            // Manually adjust size for ArrayList (Vector.setSize equivalent)
+            while (charactersByArticle.size() > numberOfArticleSections)
+            {
+                charactersByArticle.remove(charactersByArticle.size() - 1);
+            }
+            while (charactersByArticle.size() < numberOfArticleSections)
+            {
+                charactersByArticle.add(new ArrayList<TextPosition>());
+            }
+
+            // Clear or reset existing entries
             for( int i=0; i<numberOfArticleSections; i++ )
             {
-                if( numberOfArticleSections < originalSize )
+                if( i < originalSize )
                 {
                     ((List)charactersByArticle.get( i )).clear();
                 }
-                else
-                {
-                    charactersByArticle.set( i, new ArrayList() );
-                }
+                // Note: new entries already added above
             }
 
             characterListMapping.clear();
@@ -523,10 +530,10 @@ public class PDFTextStripper extends PDFStreamEngine
                 hasRtl = true;
             }
 
-            /* Now cycle through to print the text.  
+            /* Now cycle through to print the text.
              * We queue up a line at a time before we print so that we can convert
              * the line from presentation form to logical form (if needed). */
-            String lineStr = "";
+            StringBuilder lineStr = new StringBuilder();
 
             textIter = textList.iterator();    // start from the beginning again
 
@@ -643,20 +650,21 @@ public class PDFTextStripper extends PDFStreamEngine
                     if(!overlap(positionY, positionHeight, maxYForLine, maxHeightForLine))
                     {
                         // If we have RTL text on the page, change the direction
+                        String lineStrValue = lineStr.toString();
                         if (hasRtl)
                         {
-                            lineStr = normalize.makeLineLogicalOrder(lineStr, isRtlDominant);
+                            lineStrValue = normalize.makeLineLogicalOrder(lineStrValue, isRtlDominant);
                         }
 
                         /* normalize string to remove presentation forms.
-                         * Note that this must come after the line direction 
+                         * Note that this must come after the line direction
                          * conversion because the process looks ahead to the next
-                         * logical character. 
+                         * logical character.
                          */
-                        lineStr = normalize.normalizePres(lineStr);
+                        lineStrValue = normalize.normalizePres(lineStrValue);
 
-                        writeString(lineStr);
-                        lineStr = "";
+                        writeString(lineStrValue);
+                        lineStr.setLength(0);
 
                         writeLineSeparator( );
 
@@ -667,13 +675,13 @@ public class PDFTextStripper extends PDFStreamEngine
                         minYTopForLine = Float.MAX_VALUE;
                     }
 
-                    //Test if our TextPosition starts after a new word would be expected to start. 
+                    //Test if our TextPosition starts after a new word would be expected to start.
                     if (expectedStartOfNextWordX != -1 && expectedStartOfNextWordX < positionX &&
                             //only bother adding a space if the last character was not a space
                             lastPosition.getCharacter() != null &&
-                            !lastPosition.getCharacter().endsWith( " " ) ) 
+                            !lastPosition.getCharacter().endsWith( " " ) )
                     {
-                        lineStr += getWordSeparator();
+                        lineStr.append(getWordSeparator());
                     }
                 }
 
@@ -687,9 +695,9 @@ public class PDFTextStripper extends PDFStreamEngine
                 endOfLastTextX = positionX + positionWidth;
 
                 // add it to the list
-                if (characterValue != null) 
+                if (characterValue != null)
                 {
-                    lineStr += characterValue;
+                    lineStr.append(characterValue);
                 }
                 maxHeightForLine = Math.max( maxHeightForLine, positionHeight );
                 minYTopForLine = Math.min(minYTopForLine, positionY - positionHeight);
@@ -699,17 +707,18 @@ public class PDFTextStripper extends PDFStreamEngine
             }
 
             // print the final line
-            if (lineStr.length() > 0) 
+            if (lineStr.length() > 0)
             {
+                String lineStrValue = lineStr.toString();
                 if (hasRtl)
                 {
-                    lineStr = normalize.makeLineLogicalOrder(lineStr, isRtlDominant);
+                    lineStrValue = normalize.makeLineLogicalOrder(lineStrValue, isRtlDominant);
                 }
 
                 // normalize string to remove presentation forms
-                lineStr = normalize.normalizePres(lineStr);
+                lineStrValue = normalize.normalizePres(lineStrValue);
 
-                writeString(lineStr);
+                writeString(lineStrValue);
             }
 
             endArticle();
