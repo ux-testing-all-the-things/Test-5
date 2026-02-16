@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.ArrayList;
 
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.cos.COSStream;
@@ -88,7 +87,7 @@ public class PDFTextStripper extends PDFStreamEngine
      *
      * Most PDFs won't have any beads, so charactersByArticle will contain a single entry.
      */
-    protected List charactersByArticle = new ArrayList();
+    protected List<List> charactersByArticle = new ArrayList<List>();
 
     private Map characterListMapping = new HashMap();
 
@@ -358,7 +357,7 @@ public class PDFTextStripper extends PDFStreamEngine
             }
             while (charactersByArticle.size() < numberOfArticleSections)
             {
-                charactersByArticle.add(new ArrayList());
+                charactersByArticle.add(new ArrayList<TextPosition>());
             }
 
             // Clear or reset existing entries

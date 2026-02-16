@@ -31,6 +31,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
  */
 public class TestPDFMergerUtility extends TestCase
 {
+    private static final String TEST_PDF_PATH = "src/test/resources/input/cweb.pdf";
+
     /**
      * Test class constructor.
      *
@@ -49,8 +51,8 @@ public class TestPDFMergerUtility extends TestCase
      */
     public void testMergeDocuments() throws Exception
     {
-        File file1 = new File("src/test/resources/input/cweb.pdf");
-        File file2 = new File("src/test/resources/input/cweb.pdf");
+        File file1 = new File(TEST_PDF_PATH);
+        File file2 = new File(TEST_PDF_PATH);
 
         // Skip test if files don't exist
         if (!file1.exists())
@@ -100,7 +102,7 @@ public class TestPDFMergerUtility extends TestCase
     public void testMergeComplexDocuments() throws Exception
     {
         // Use a PDF that likely has more complex structure
-        File file1 = new File("src/test/resources/input/cweb.pdf");
+        File file1 = new File(TEST_PDF_PATH);
 
         if (!file1.exists())
         {
@@ -134,7 +136,7 @@ public class TestPDFMergerUtility extends TestCase
             PDFTextStripper stripper = new PDFTextStripper();
             String text = stripper.getText(merged);
             assertNotNull("Should be able to extract text", text);
-            assertTrue("Text should not be empty", text.length() > 0);
+            assertTrue("Text should not be empty", !text.isEmpty());
         }
         finally
         {

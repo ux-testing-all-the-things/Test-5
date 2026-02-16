@@ -93,6 +93,8 @@ public class TestTextStripper extends TestCase
      */
     private static final Log log = LogFactory.getLog(TestTextStripper.class);
 
+    private static final String TEST_PDF_PATH = "src/test/resources/input/cweb.pdf";
+
     private boolean bFail = false;
     private PDFTextStripper stripper = null;
     private final String encoding = "UTF-16LE";
@@ -412,7 +414,7 @@ public class TestTextStripper extends TestCase
     public void testTextExtractionWithLongDocument() throws Exception
     {
         // Load a PDF with substantial text content
-        File testFile = new File("src/test/resources/input/cweb.pdf");
+        File testFile = new File(TEST_PDF_PATH);
         if (!testFile.exists())
         {
             return; // Skip if file doesn't exist
@@ -422,14 +424,14 @@ public class TestTextStripper extends TestCase
         try
         {
             document = PDDocument.load(testFile);
-            PDFTextStripper stripper = new PDFTextStripper(encoding);
-            stripper.setLineSeparator("\n");
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
+            textStripper.setLineSeparator("\n");
 
-            String text = stripper.getText(document);
+            String text = textStripper.getText(document);
 
             // Verify basic correctness
             assertNotNull("Extracted text should not be null", text);
-            assertTrue("Text should not be empty", text.length() > 0);
+            assertTrue("Text should not be empty", !text.isEmpty());
 
             // Verify word separators are present
             assertTrue("Text should contain spaces", text.contains(" "));
@@ -455,7 +457,7 @@ public class TestTextStripper extends TestCase
     public void testWordSeparatorInsertion() throws Exception
     {
         // Use a simple PDF where we know word boundaries
-        File testFile = new File("src/test/resources/input/cweb.pdf");
+        File testFile = new File(TEST_PDF_PATH);
         if (!testFile.exists())
         {
             return; // Skip if file doesn't exist
@@ -465,11 +467,11 @@ public class TestTextStripper extends TestCase
         try
         {
             document = PDDocument.load(testFile);
-            PDFTextStripper stripper = new PDFTextStripper(encoding);
-            stripper.setLineSeparator("\n");
-            stripper.setWordSeparator("|"); // Use distinctive separator
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
+            textStripper.setLineSeparator("\n");
+            textStripper.setWordSeparator("|"); // Use distinctive separator
 
-            String text = stripper.getText(document);
+            String text = textStripper.getText(document);
 
             // Verify separator is used
             assertTrue("Custom word separator should be present",
@@ -496,7 +498,7 @@ public class TestTextStripper extends TestCase
      */
     public void testCharactersByArticleType() throws Exception
     {
-        File testFile = new File("src/test/resources/input/cweb.pdf");
+        File testFile = new File(TEST_PDF_PATH);
         if (!testFile.exists())
         {
             return; // Skip if file doesn't exist
@@ -506,20 +508,20 @@ public class TestTextStripper extends TestCase
         try
         {
             document = PDDocument.load(testFile);
-            PDFTextStripper stripper = new PDFTextStripper(encoding);
+            PDFTextStripper textStripper = new PDFTextStripper(encoding);
 
             // Extract text (this populates charactersByArticle)
-            stripper.getText(document);
+            textStripper.getText(document);
 
             // Access the protected field via public method
-            java.util.List articles = stripper.getCharactersByArticle();
+            java.util.List<java.util.List> articles = textStripper.getCharactersByArticle();
 
             // Verify it's a List (works with both Vector and ArrayList)
             assertNotNull("charactersByArticle should not be null", articles);
             assertTrue("charactersByArticle should be a List",
                        articles instanceof java.util.List);
             assertTrue("charactersByArticle should not be empty",
-                       articles.size() > 0);
+                       !articles.isEmpty());
 
             // Verify we can iterate and access elements
             for (int i = 0; i < articles.size(); i++)
@@ -546,7 +548,7 @@ public class TestTextStripper extends TestCase
      */
     public void testPDFTextStripperByAreaCompatibility() throws Exception
     {
-        File testFile = new File("src/test/resources/input/cweb.pdf");
+        File testFile = new File(TEST_PDF_PATH);
         if (!testFile.exists())
         {
             return; // Skip if file doesn't exist
@@ -558,20 +560,20 @@ public class TestTextStripper extends TestCase
             document = PDDocument.load(testFile);
 
             // Test the subclass
-            PDFTextStripperByArea stripper = new PDFTextStripperByArea();
+            PDFTextStripperByArea textStripperByArea = new PDFTextStripperByArea();
 
             // Add a region
-            stripper.addRegion("region1",
+            textStripperByArea.addRegion("region1",
                               new java.awt.geom.Rectangle2D.Double(0, 0, 500, 500));
 
             // Extract regions
-            java.util.List pages = document.getDocumentCatalog().getAllPages();
+            java.util.List<org.apache.pdfbox.pdmodel.PDPage> pages = document.getDocumentCatalog().getAllPages();
             org.apache.pdfbox.pdmodel.PDPage firstPage =
                 (org.apache.pdfbox.pdmodel.PDPage) pages.get(0);
-            stripper.extractRegions(firstPage);
+            textStripperByArea.extractRegions(firstPage);
 
             // Get text from region
-            String text = stripper.getTextForRegion("region1");
+            String text = textStripperByArea.getTextForRegion("region1");
 
             // Verify it worked
             assertNotNull("Region text should not be null", text);
