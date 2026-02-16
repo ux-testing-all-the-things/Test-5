@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -103,7 +102,7 @@ public class PDFTextStripperByArea extends PDFTextStripper
             //reset the stored text for the region so this class
             //can be reused.
             String regionName = (String)regionIter.next();
-            Vector regionCharactersByArticle = new Vector();
+            List regionCharactersByArticle = new ArrayList();
             regionCharactersByArticle.add( new ArrayList() );
             regionCharacterList.put( regionName, regionCharactersByArticle );
             regionText.put( regionName, new StringWriter() );
@@ -130,7 +129,7 @@ public class PDFTextStripperByArea extends PDFTextStripper
             Rectangle2D rect = (Rectangle2D)regionArea.get( region );
             if( rect.contains( text.getX(), text.getY() ) )
             {
-                charactersByArticle = (Vector)regionCharacterList.get( region );
+                charactersByArticle = (List)regionCharacterList.get( region );
                 super.processTextPosition( text );
             }
         }
