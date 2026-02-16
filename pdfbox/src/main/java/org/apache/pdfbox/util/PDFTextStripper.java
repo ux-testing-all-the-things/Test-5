@@ -523,10 +523,10 @@ public class PDFTextStripper extends PDFStreamEngine
                 hasRtl = true;
             }
 
-            /* Now cycle through to print the text.  
+            /* Now cycle through to print the text.
              * We queue up a line at a time before we print so that we can convert
              * the line from presentation form to logical form (if needed). */
-            String lineStr = "";
+            StringBuilder lineStr = new StringBuilder();
 
             textIter = textList.iterator();    // start from the beginning again
 
@@ -643,20 +643,21 @@ public class PDFTextStripper extends PDFStreamEngine
                     if(!overlap(positionY, positionHeight, maxYForLine, maxHeightForLine))
                     {
                         // If we have RTL text on the page, change the direction
+                        String lineStrValue = lineStr.toString();
                         if (hasRtl)
                         {
-                            lineStr = normalize.makeLineLogicalOrder(lineStr, isRtlDominant);
+                            lineStrValue = normalize.makeLineLogicalOrder(lineStrValue, isRtlDominant);
                         }
 
                         /* normalize string to remove presentation forms.
-                         * Note that this must come after the line direction 
+                         * Note that this must come after the line direction
                          * conversion because the process looks ahead to the next
-                         * logical character. 
+                         * logical character.
                          */
-                        lineStr = normalize.normalizePres(lineStr);
+                        lineStrValue = normalize.normalizePres(lineStrValue);
 
-                        writeString(lineStr);
-                        lineStr = "";
+                        writeString(lineStrValue);
+                        lineStr.setLength(0);
 
                         writeLineSeparator( );
 
@@ -667,13 +668,13 @@ public class PDFTextStripper extends PDFStreamEngine
                         minYTopForLine = Float.MAX_VALUE;
                     }
 
-                    //Test if our TextPosition starts after a new word would be expected to start. 
+                    //Test if our TextPosition starts after a new word would be expected to start.
                     if (expectedStartOfNextWordX != -1 && expectedStartOfNextWordX < positionX &&
                             //only bother adding a space if the last character was not a space
                             lastPosition.getCharacter() != null &&
-                            !lastPosition.getCharacter().endsWith( " " ) ) 
+                            !lastPosition.getCharacter().endsWith( " " ) )
                     {
-                        lineStr += getWordSeparator();
+                        lineStr.append(getWordSeparator());
                     }
                 }
 
@@ -687,9 +688,9 @@ public class PDFTextStripper extends PDFStreamEngine
                 endOfLastTextX = positionX + positionWidth;
 
                 // add it to the list
-                if (characterValue != null) 
+                if (characterValue != null)
                 {
-                    lineStr += characterValue;
+                    lineStr.append(characterValue);
                 }
                 maxHeightForLine = Math.max( maxHeightForLine, positionHeight );
                 minYTopForLine = Math.min(minYTopForLine, positionY - positionHeight);
@@ -699,17 +700,18 @@ public class PDFTextStripper extends PDFStreamEngine
             }
 
             // print the final line
-            if (lineStr.length() > 0) 
+            if (lineStr.length() > 0)
             {
+                String lineStrValue = lineStr.toString();
                 if (hasRtl)
                 {
-                    lineStr = normalize.makeLineLogicalOrder(lineStr, isRtlDominant);
+                    lineStrValue = normalize.makeLineLogicalOrder(lineStrValue, isRtlDominant);
                 }
 
                 // normalize string to remove presentation forms
-                lineStr = normalize.normalizePres(lineStr);
+                lineStrValue = normalize.normalizePres(lineStrValue);
 
-                writeString(lineStr);
+                writeString(lineStrValue);
             }
 
             endArticle();

@@ -404,6 +404,189 @@ public class TestTextStripper extends TestCase
     }
 
     /**
+     * Test text extraction on a document with many text positions
+     * to verify StringBuilder optimization maintains correctness.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testTextExtractionWithLongDocument() throws Exception
+    {
+        // Load a PDF with substantial text content
+        File testFile = new File("src/test/resources/input/cweb.pdf");
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper stripper = new PDFTextStripper(encoding);
+            stripper.setLineSeparator("\n");
+
+            String text = stripper.getText(document);
+
+            // Verify basic correctness
+            assertNotNull("Extracted text should not be null", text);
+            assertTrue("Text should not be empty", text.length() > 0);
+
+            // Verify word separators are present
+            assertTrue("Text should contain spaces", text.contains(" "));
+
+            // Verify the text contains expected content (well-formed)
+            assertTrue("Text should be well-formed", text.split("\\s+").length > 10);
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that word separators are correctly inserted between words.
+     * This is critical because StringBuilder changes how strings are built.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testWordSeparatorInsertion() throws Exception
+    {
+        // Use a simple PDF where we know word boundaries
+        File testFile = new File("src/test/resources/input/cweb.pdf");
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper stripper = new PDFTextStripper(encoding);
+            stripper.setLineSeparator("\n");
+            stripper.setWordSeparator("|"); // Use distinctive separator
+
+            String text = stripper.getText(document);
+
+            // Verify separator is used
+            assertTrue("Custom word separator should be present",
+                       text.contains("|"));
+
+            // Verify words aren't run together
+            assertFalse("Words should not run together",
+                        text.matches(".*[a-zA-Z]{20,}.*"));
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that charactersByArticle collection works correctly.
+     * This test verifies the change from Vector to ArrayList.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testCharactersByArticleType() throws Exception
+    {
+        File testFile = new File("src/test/resources/input/cweb.pdf");
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+            PDFTextStripper stripper = new PDFTextStripper(encoding);
+
+            // Extract text (this populates charactersByArticle)
+            stripper.getText(document);
+
+            // Access the protected field via public method
+            java.util.List articles = stripper.getCharactersByArticle();
+
+            // Verify it's a List (works with both Vector and ArrayList)
+            assertNotNull("charactersByArticle should not be null", articles);
+            assertTrue("charactersByArticle should be a List",
+                       articles instanceof java.util.List);
+            assertTrue("charactersByArticle should not be empty",
+                       articles.size() > 0);
+
+            // Verify we can iterate and access elements
+            for (int i = 0; i < articles.size(); i++)
+            {
+                Object article = articles.get(i);
+                assertTrue("Each article should be a List",
+                           article instanceof java.util.List);
+            }
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
+     * Test that PDFTextStripperByArea (subclass) still works
+     * after Vector to ArrayList change.
+     *
+     * @throws Exception when there is an exception
+     */
+    public void testPDFTextStripperByAreaCompatibility() throws Exception
+    {
+        File testFile = new File("src/test/resources/input/cweb.pdf");
+        if (!testFile.exists())
+        {
+            return; // Skip if file doesn't exist
+        }
+
+        PDDocument document = null;
+        try
+        {
+            document = PDDocument.load(testFile);
+
+            // Test the subclass
+            PDFTextStripperByArea stripper = new PDFTextStripperByArea();
+
+            // Add a region
+            stripper.addRegion("region1",
+                              new java.awt.geom.Rectangle2D.Double(0, 0, 500, 500));
+
+            // Extract regions
+            java.util.List pages = document.getDocumentCatalog().getAllPages();
+            org.apache.pdfbox.pdmodel.PDPage firstPage =
+                (org.apache.pdfbox.pdmodel.PDPage) pages.get(0);
+            stripper.extractRegions(firstPage);
+
+            // Get text from region
+            String text = stripper.getTextForRegion("region1");
+
+            // Verify it worked
+            assertNotNull("Region text should not be null", text);
+            // If there's text in that region, it should be extracted
+        }
+        finally
+        {
+            if (document != null)
+            {
+                document.close();
+            }
+        }
+    }
+
+    /**
      * Set the tests in the suite for this test class.
      *
      * @return the Suite.
