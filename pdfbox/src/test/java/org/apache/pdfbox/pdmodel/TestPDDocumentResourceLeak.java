@@ -32,19 +32,26 @@ import org.apache.pdfbox.io.RandomAccessFile;
  */
 public class TestPDDocumentResourceLeak extends TestCase
 {
+    private static final String CORRUPT_PREFIX = "corrupt";
+    private static final String CORRUPT_PDF_CONTENT = "This is not a valid PDF file content";
+    private static final String SHOULD_THROW_IO_EXCEPTION = "Should have thrown IOException for corrupt PDF";
+    private static final String FILE_SHOULD_BE_DELETABLE = "File should be deletable - no leaked file handle";
+    private static final String FAILED_TO_RECREATE = "Failed to recreate corrupt file: ";
+
     private File corruptPdfFile;
     private File validPdfFile;
 
+    @SuppressWarnings("squid:S2093") // Java 5 compatibility - can't use try-with-resources
     protected void setUp() throws Exception
     {
         super.setUp();
 
         // Create a corrupt PDF file that will cause parsing to fail
-        corruptPdfFile = File.createTempFile("corrupt", ".pdf");
+        corruptPdfFile = File.createTempFile(CORRUPT_PREFIX, ".pdf");
         FileOutputStream fos = new FileOutputStream(corruptPdfFile);
         try
         {
-            fos.write("This is not a valid PDF file content".getBytes());
+            fos.write(CORRUPT_PDF_CONTENT.getBytes());
         }
         finally
         {
@@ -82,17 +89,50 @@ public class TestPDDocumentResourceLeak extends TestCase
         }
     }
 
+    @SuppressWarnings("squid:S4042") // Java 5 compatibility - can't use java.nio.file.Files
     protected void tearDown() throws Exception
     {
         if (corruptPdfFile != null && corruptPdfFile.exists())
         {
-            corruptPdfFile.delete();
+            if (!corruptPdfFile.delete())
+            {
+                System.err.println("Warning: Failed to delete corrupt test file: " + corruptPdfFile.getAbsolutePath());
+            }
         }
         if (validPdfFile != null && validPdfFile.exists())
         {
-            validPdfFile.delete();
+            if (!validPdfFile.delete())
+            {
+                System.err.println("Warning: Failed to delete valid test file: " + validPdfFile.getAbsolutePath());
+            }
         }
         super.tearDown();
+    }
+
+    /**
+     * Helper method to recreate the corrupt PDF file after deletion in tests.
+     * Extracted to avoid nested try blocks and reduce code duplication.
+     */
+    @SuppressWarnings("squid:S2093") // Java 5 compatibility - can't use try-with-resources
+    private void recreateCorruptPdfFile()
+    {
+        try
+        {
+            corruptPdfFile = File.createTempFile(CORRUPT_PREFIX, ".pdf");
+            FileOutputStream fos = new FileOutputStream(corruptPdfFile);
+            try
+            {
+                fos.write(CORRUPT_PDF_CONTENT.getBytes());
+            }
+            finally
+            {
+                fos.close();
+            }
+        }
+        catch (IOException e)
+        {
+            fail(FAILED_TO_RECREATE + e.getMessage());
+        }
     }
 
     /**
@@ -100,12 +140,13 @@ public class TestPDDocumentResourceLeak extends TestCase
      * This test verifies that the file can be deleted after IOException,
      * which would fail on Windows if a file handle was leaked.
      */
+    @SuppressWarnings("squid:S4042") // Java 5 compatibility - can't use java.nio.file.Files
     public void testLoadFileStringThrowsIOExceptionDoesNotLeakFileHandle()
     {
         try
         {
             PDDocument.load(corruptPdfFile.getAbsolutePath());
-            fail("Should have thrown IOException for corrupt PDF");
+            fail(SHOULD_THROW_IO_EXCEPTION);
         }
         catch (IOException e)
         {
@@ -113,38 +154,23 @@ public class TestPDDocumentResourceLeak extends TestCase
         }
 
         // Verify file can be deleted (would fail if handle was leaked)
-        assertTrue("File should be deletable - no leaked file handle",
+        assertTrue(FILE_SHOULD_BE_DELETABLE,
                    corruptPdfFile.delete());
 
         // Recreate for other tests
-        try
-        {
-            corruptPdfFile = File.createTempFile("corrupt", ".pdf");
-            FileOutputStream fos = new FileOutputStream(corruptPdfFile);
-            try
-            {
-                fos.write("This is not a valid PDF file content".getBytes());
-            }
-            finally
-            {
-                fos.close();
-            }
-        }
-        catch (IOException e)
-        {
-            fail("Failed to recreate corrupt file: " + e.getMessage());
-        }
+        recreateCorruptPdfFile();
     }
 
     /**
      * Test that load(String, boolean) does not leak file handles when parsing fails.
      */
+    @SuppressWarnings("squid:S4042") // Java 5 compatibility - can't use java.nio.file.Files
     public void testLoadFileStringWithForceThrowsIOExceptionDoesNotLeakFileHandle()
     {
         try
         {
             PDDocument.load(corruptPdfFile.getAbsolutePath(), false);
-            fail("Should have thrown IOException for corrupt PDF");
+            fail(SHOULD_THROW_IO_EXCEPTION);
         }
         catch (IOException e)
         {
@@ -152,38 +178,23 @@ public class TestPDDocumentResourceLeak extends TestCase
         }
 
         // Verify file can be deleted (would fail if handle was leaked)
-        assertTrue("File should be deletable - no leaked file handle",
+        assertTrue(FILE_SHOULD_BE_DELETABLE,
                    corruptPdfFile.delete());
 
         // Recreate for other tests
-        try
-        {
-            corruptPdfFile = File.createTempFile("corrupt", ".pdf");
-            FileOutputStream fos = new FileOutputStream(corruptPdfFile);
-            try
-            {
-                fos.write("This is not a valid PDF file content".getBytes());
-            }
-            finally
-            {
-                fos.close();
-            }
-        }
-        catch (IOException e)
-        {
-            fail("Failed to recreate corrupt file: " + e.getMessage());
-        }
+        recreateCorruptPdfFile();
     }
 
     /**
      * Test that load(File) does not leak file handles when parsing fails.
      */
+    @SuppressWarnings("squid:S4042") // Java 5 compatibility - can't use java.nio.file.Files
     public void testLoadFileObjectThrowsIOExceptionDoesNotLeakFileHandle()
     {
         try
         {
             PDDocument.load(corruptPdfFile);
-            fail("Should have thrown IOException for corrupt PDF");
+            fail(SHOULD_THROW_IO_EXCEPTION);
         }
         catch (IOException e)
         {
@@ -191,27 +202,11 @@ public class TestPDDocumentResourceLeak extends TestCase
         }
 
         // Verify file can be deleted (would fail if handle was leaked)
-        assertTrue("File should be deletable - no leaked file handle",
+        assertTrue(FILE_SHOULD_BE_DELETABLE,
                    corruptPdfFile.delete());
 
         // Recreate for other tests
-        try
-        {
-            corruptPdfFile = File.createTempFile("corrupt", ".pdf");
-            FileOutputStream fos = new FileOutputStream(corruptPdfFile);
-            try
-            {
-                fos.write("This is not a valid PDF file content".getBytes());
-            }
-            finally
-            {
-                fos.close();
-            }
-        }
-        catch (IOException e)
-        {
-            fail("Failed to recreate corrupt file: " + e.getMessage());
-        }
+        recreateCorruptPdfFile();
     }
 
     /**
@@ -249,6 +244,7 @@ public class TestPDDocumentResourceLeak extends TestCase
      * Test that load(File, RandomAccess) does not leak file handles
      * and properly uses the scratchFile parameter (bug fix test).
      */
+    @SuppressWarnings({"squid:S2093", "squid:S4042"}) // Java 5 compatibility
     public void testLoadFileWithScratchFileDoesNotLeak()
     {
         File scratchFile = null;
@@ -258,31 +254,7 @@ public class TestPDDocumentResourceLeak extends TestCase
             scratchFile = File.createTempFile("scratch", ".tmp");
             randomAccess = new RandomAccessFile(scratchFile, "rw");
 
-            try
-            {
-                PDDocument.load(corruptPdfFile, randomAccess);
-                fail("Should have thrown IOException for corrupt PDF");
-            }
-            catch (IOException e)
-            {
-                // Expected - parsing should fail for corrupt file
-            }
-
-            // Verify file can be deleted (would fail if handle was leaked)
-            assertTrue("File should be deletable - no leaked file handle",
-                       corruptPdfFile.delete());
-
-            // Recreate for other tests
-            corruptPdfFile = File.createTempFile("corrupt", ".pdf");
-            FileOutputStream fos = new FileOutputStream(corruptPdfFile);
-            try
-            {
-                fos.write("This is not a valid PDF file content".getBytes());
-            }
-            finally
-            {
-                fos.close();
-            }
+            testLoadWithRandomAccess(randomAccess);
         }
         catch (IOException e)
         {
@@ -290,20 +262,64 @@ public class TestPDDocumentResourceLeak extends TestCase
         }
         finally
         {
-            if (randomAccess != null)
+            closeRandomAccess(randomAccess);
+            deleteScratchFile(scratchFile);
+        }
+    }
+
+    /**
+     * Helper method to test loading with RandomAccess parameter.
+     * Extracted to avoid nested try blocks.
+     */
+    private void testLoadWithRandomAccess(RandomAccess randomAccess) throws IOException
+    {
+        try
+        {
+            PDDocument.load(corruptPdfFile, randomAccess);
+            fail(SHOULD_THROW_IO_EXCEPTION);
+        }
+        catch (IOException e)
+        {
+            // Expected - parsing should fail for corrupt file
+        }
+
+        // Verify file can be deleted (would fail if handle was leaked)
+        assertTrue(FILE_SHOULD_BE_DELETABLE,
+                   corruptPdfFile.delete());
+
+        // Recreate for other tests
+        recreateCorruptPdfFile();
+    }
+
+    /**
+     * Helper method to close RandomAccess resource.
+     */
+    private void closeRandomAccess(RandomAccess randomAccess)
+    {
+        if (randomAccess != null)
+        {
+            try
             {
-                try
-                {
-                    randomAccess.close();
-                }
-                catch (IOException e)
-                {
-                    // Ignore
-                }
+                randomAccess.close();
             }
-            if (scratchFile != null && scratchFile.exists())
+            catch (IOException e)
             {
-                scratchFile.delete();
+                // Ignore close exception in cleanup
+            }
+        }
+    }
+
+    /**
+     * Helper method to delete scratch file.
+     */
+    @SuppressWarnings("squid:S4042") // Java 5 compatibility - can't use java.nio.file.Files
+    private void deleteScratchFile(File scratchFile)
+    {
+        if (scratchFile != null && scratchFile.exists())
+        {
+            if (!scratchFile.delete())
+            {
+                System.err.println("Warning: Failed to delete scratch file: " + scratchFile.getAbsolutePath());
             }
         }
     }
