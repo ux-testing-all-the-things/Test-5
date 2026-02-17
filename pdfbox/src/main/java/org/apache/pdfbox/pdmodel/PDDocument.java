@@ -736,7 +736,27 @@ public class PDDocument implements Pageable
      */
     public static PDDocument load( String filename ) throws IOException
     {
-        return load( new FileInputStream( filename ) );
+        FileInputStream input = null;
+        try
+        {
+            input = new FileInputStream( filename );
+            return load( input );
+        }
+        catch ( IOException e )
+        {
+            if ( input != null )
+            {
+                try
+                {
+                    input.close();
+                }
+                catch ( IOException closeException )
+                {
+                    // Log but don't mask original exception
+                }
+            }
+            throw e;
+        }
     }
     
     /**
@@ -753,7 +773,27 @@ public class PDDocument implements Pageable
      */
     public static PDDocument load(String filename, boolean force) throws IOException
     {
-        return load(new FileInputStream( filename ), force);
+        FileInputStream input = null;
+        try
+        {
+            input = new FileInputStream( filename );
+            return load( input, force );
+        }
+        catch ( IOException e )
+        {
+            if ( input != null )
+            {
+                try
+                {
+                    input.close();
+                }
+                catch ( IOException closeException )
+                {
+                    // Log but don't mask original exception
+                }
+            }
+            throw e;
+        }
     }
 
     /**
@@ -768,7 +808,27 @@ public class PDDocument implements Pageable
      */
     public static PDDocument load( String filename, RandomAccess scratchFile ) throws IOException
     {
-        return load( new FileInputStream( filename ), scratchFile );
+        FileInputStream input = null;
+        try
+        {
+            input = new FileInputStream( filename );
+            return load( input, scratchFile );
+        }
+        catch ( IOException e )
+        {
+            if ( input != null )
+            {
+                try
+                {
+                    input.close();
+                }
+                catch ( IOException closeException )
+                {
+                    // Log but don't mask original exception
+                }
+            }
+            throw e;
+        }
     }
 
     /**
@@ -782,7 +842,27 @@ public class PDDocument implements Pageable
      */
     public static PDDocument load( File file ) throws IOException
     {
-        return load( new FileInputStream( file ) );
+        FileInputStream input = null;
+        try
+        {
+            input = new FileInputStream( file );
+            return load( input );
+        }
+        catch ( IOException e )
+        {
+            if ( input != null )
+            {
+                try
+                {
+                    input.close();
+                }
+                catch ( IOException closeException )
+                {
+                    // Log but don't mask original exception
+                }
+            }
+            throw e;
+        }
     }
 
     /**
@@ -797,7 +877,27 @@ public class PDDocument implements Pageable
      */
     public static PDDocument load( File file, RandomAccess scratchFile ) throws IOException
     {
-        return load( new FileInputStream( file ) );
+        FileInputStream input = null;
+        try
+        {
+            input = new FileInputStream( file );
+            return load( input, scratchFile );
+        }
+        catch ( IOException e )
+        {
+            if ( input != null )
+            {
+                try
+                {
+                    input.close();
+                }
+                catch ( IOException closeException )
+                {
+                    // Log but don't mask original exception
+                }
+            }
+            throw e;
+        }
     }
 
     /**
